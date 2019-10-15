@@ -1,37 +1,41 @@
+<%@ page import="ru.javawebinar.topjava.util.TimeUtil" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <html>
 <head>
     <title>Meals</title>
+    <style>
+        .normal {
+            color: green;
+        }
+
+        .exceeded {
+            color: red;
+        }
+    </style>
 </head>
 <body>
 <h3><a href="index.html">Home</a></h3>
 <hr>
-<h2>Meals</h2>
-
-<table style="border: 1px solid black;">
+<h2>Meal list</h2>
+<hr>
+<table border="1" cellpadding="8" cellspacing="8">
     <thead>
     <tr>
         <th>Date</th>
         <th>Description</th>
         <th>Calories</th>
-        <th>Excess</th>
     </tr>
     </thead>
     <tbody>
     <c:forEach var="meal" items="${mealToList}">
-        <tr>
-            <td>${meal.dateTime}</td>
+        <jsp:useBean id="meal" scope="page" type="ru.javawebinar.topjava.model.MealTo"/>
+        <tr class="${meal.excess ? 'exceeded' : 'normal'}">
+            <td>
+                <%=TimeUtil.toString(meal.getDateTime())%>
+            </td>
             <td>${meal.description}</td>
             <td>${meal.calories}</td>
-            <c:choose>
-                <c:when test="${meal.excess}">
-                    <td style="color: red">ПРЕВЫШЕНО</td>
-                </c:when>
-                <c:otherwise>
-                    <td style="color: black">НЕПРЕВЫШЕНО</td>
-                </c:otherwise>
-            </c:choose>
         </tr>
     </c:forEach>
     </tbody>
