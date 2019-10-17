@@ -4,9 +4,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.javawebinar.topjava.model.Meal;
 import ru.javawebinar.topjava.repository.MealRepository;
+import ru.javawebinar.topjava.to.MealTo;
+import ru.javawebinar.topjava.util.MealsUtil;
 import ru.javawebinar.topjava.util.exception.NotFoundException;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class MealService {
@@ -18,12 +22,18 @@ public class MealService {
         this.repository = repository;
     }
 
-    public List<Meal> getAll(int userId) {
-        List<Meal> meals = repository.getAll(userId);
-        if (meals.isEmpty()) {
+    public List<MealTo> getAll(int userId) {
+        List<Meal> meals = (List<Meal>) repository.getAll();
+        List<Meal> mealsByUser = meals.stream()
+                .filter(meal -> meal.getUserId() == userId)
+                .sorted(Comparator.comparing(Meal::getDateTime).reversed())
+                .collect(Collectors.toList());
+        if (mealsByUser.isEmpty()) {
             throw new NotFoundException("Not found entity for userId = " + userId);
         }
-        return repository.getAll(userId);
+        List<MealTo> mealsToByUser = MealsUtil.getTos(mealsByUser,
+                MealsUtil.DEFAULT_CALORIES_PER_DAY);
+        return mealsToByUser;
     }
 
     public Meal get(int id, int userId) {
