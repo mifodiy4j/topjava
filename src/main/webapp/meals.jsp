@@ -23,6 +23,15 @@
     <h2>Meals</h2>
     <a href="meals?action=create">Add Meal</a>
     <br><br>
+    <a href="meals?action=filter">Filter</a>
+    <br>
+    <dl>
+        <dt>Date from:</dt>
+        <dd><input type="date" value="dateFrom" name="dateFrom" required></dd>
+        <dt>Date to:</dt>
+        <dd><input type="date" value="dateTo" name="dateTo" required></dd>
+    </dl>
+    <br><br>
     <table border="1" cellpadding="8" cellspacing="0">
         <thead>
         <tr>
@@ -35,18 +44,20 @@
         </thead>
         <c:forEach items="${meals}" var="meal">
             <jsp:useBean id="meal" type="ru.javawebinar.topjava.to.MealTo"/>
-            <tr class="${meal.excess ? 'excess' : 'normal'}">
-                <td>
-                        <%--${meal.dateTime.toLocalDate()} ${meal.dateTime.toLocalTime()}--%>
-                        <%--<%=TimeUtil.toString(meal.getDateTime())%>--%>
-                        <%--${fn:replace(meal.dateTime, 'T', ' ')}--%>
-                        ${fn:formatDateTime(meal.dateTime)}
-                </td>
-                <td>${meal.description}</td>
-                <td>${meal.calories}</td>
-                <td><a href="meals?action=update&id=${meal.id}">Update</a></td>
-                <td><a href="meals?action=delete&id=${meal.id}">Delete</a></td>
-            </tr>
+            <c:if test = "${meal.dateTime.isBefore('2019-11-27')}">
+                <tr class="${meal.excess ? 'excess' : 'normal'}">
+                    <td>
+                            <%--${meal.dateTime.toLocalDate()} ${meal.dateTime.toLocalTime()}--%>
+                            <%--<%=TimeUtil.toString(meal.getDateTime())%>--%>
+                            <%--${fn:replace(meal.dateTime, 'T', ' ')}--%>
+                            ${fn:formatDateTime(meal.dateTime)}
+                    </td>
+                    <td>${meal.description}</td>
+                    <td>${meal.calories}</td>
+                    <td><a href="meals?action=update&id=${meal.id}">Update</a></td>
+                    <td><a href="meals?action=delete&id=${meal.id}">Delete</a></td>
+                </tr>
+            </c:if>
         </c:forEach>
     </table>
 </section>
