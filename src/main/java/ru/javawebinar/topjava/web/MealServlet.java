@@ -6,7 +6,9 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import ru.javawebinar.topjava.model.Meal;
 import ru.javawebinar.topjava.repository.MealRepository;
+import ru.javawebinar.topjava.util.DateTimeUtil;
 import ru.javawebinar.topjava.util.MealsUtil;
+import ru.javawebinar.topjava.web.meal.MealRestController;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -14,7 +16,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
@@ -23,12 +27,14 @@ public class MealServlet extends HttpServlet {
 
     private MealRepository repository;
     private ConfigurableApplicationContext appCtx;
+    private MealRestController controller;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
         appCtx = new ClassPathXmlApplicationContext("spring/spring-app.xml");
         repository = appCtx.getBean(MealRepository.class);
+        controller = appCtx.getBean(MealRestController.class);
     }
 
     @Override
@@ -38,18 +44,29 @@ public class MealServlet extends HttpServlet {
     }
 
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest request,
+                          HttpServletResponse response) throws ServletException, IOException {
         request.setCharacterEncoding("UTF-8");
         String id = request.getParameter("id");
+        String action = request.getParameter("action");
+        if (action == null) {
+            Meal meal = new Meal(id.isEmpty() ? null : Integer.valueOf(id),
+                    LocalDateTime.parse(request.getParameter("dateTime")),
+                    request.getParameter("description"),
+                    Integer.parseInt(request.getParameter("calories")));
 
-        Meal meal = new Meal(id.isEmpty() ? null : Integer.valueOf(id),
-                LocalDateTime.parse(request.getParameter("dateTime")),
-                request.getParameter("description"),
-                Integer.parseInt(request.getParameter("calories")));
-
-        log.info(meal.isNew() ? "Create {}" : "Update {}", meal);
-        repository.save(meal);
-        response.sendRedirect("meals");
+            log.info(meal.isNew() ? "Create {}" : "Update {}", meal);
+            repository.save(meal);
+            response.sendRedirect("meals");
+        } else {
+            log.info("doPost with action = {}", action);
+            LocalDate fromDate = DateTimeUtil.parseLocalDate(request.getParameter("fromDate"), DateTimeUtil.MIN_DATE);
+            LocalDate toDate = DateTimeUtil.parseLocalDate(request.getParameter("toDate"), DateTimeUtil.MAX_DATE);
+            LocalTime fromTime = DateTimeUtil.parseLocalTime(request.getParameter("fromTime"), LocalTime.MIN);
+            LocalTime toTime = DateTimeUtil.parseLocalTime(request.getParameter("toTime"), LocalTime.MAX);
+            request.setAttribute("meals", controller.isBetween(fromDate, toDate, fromTime, toTime));
+            request.getRequestDispatcher("/meals.jsp").forward(request, response);
+        }
     }
 
     @Override
@@ -70,9 +87,6 @@ public class MealServlet extends HttpServlet {
                         repository.get(getId(request));
                 request.setAttribute("meal", meal);
                 request.getRequestDispatcher("/mealForm.jsp").forward(request, response);
-                break;
-            case "filter":
-                response.sendRedirect("meals");
                 break;
             case "all":
             default:

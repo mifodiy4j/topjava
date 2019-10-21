@@ -9,7 +9,11 @@ import ru.javawebinar.topjava.service.MealService;
 import ru.javawebinar.topjava.to.MealTo;
 import ru.javawebinar.topjava.web.SecurityUtil;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static ru.javawebinar.topjava.util.ValidationUtil.checkNew;
 
@@ -44,5 +48,15 @@ public class MealRestController {
         int userId = SecurityUtil.authUserId();
         log.info("delete id = {} for userId = {}", id, userId);
         service.delete(id, userId);
+    }
+
+    public List<MealTo> isBetween(LocalDate fromDate, LocalDate toDate,
+                                  LocalTime fromTime, LocalTime toTime) {
+        List<MealTo> all = getAll();
+        return all.stream().filter(e -> {
+            LocalDateTime from = LocalDateTime.of(fromDate, fromTime);
+            LocalDateTime to = LocalDateTime.of(toDate, toTime);
+            return e.getDateTime().isAfter(from) && e.getDateTime().isBefore(to);
+        }).collect(Collectors.toList());
     }
 }
