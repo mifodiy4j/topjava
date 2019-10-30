@@ -22,7 +22,7 @@ public class JdbcMealRepository implements MealRepository {
     private static final RowMapper<Meal> ROW_MAPPER =
             (rs, rowNumber) -> new Meal(
                     rs.getInt("id"),
-                    rs.getTimestamp("dateTime").toLocalDateTime(),
+                    rs.getTimestamp("date_time").toLocalDateTime(),
                     rs.getString("description"),
                     rs.getInt("calories"));
 
@@ -47,16 +47,18 @@ public class JdbcMealRepository implements MealRepository {
         MapSqlParameterSource map = new MapSqlParameterSource()
                 .addValue("id", meal.getId())
                 .addValue("user_id", userId)
-                .addValue("dateTime", Timestamp.valueOf(meal.getDateTime()))
+                .addValue("date_time", Timestamp.valueOf(meal.getDateTime()))
                 .addValue("description", meal.getDescription())
                 .addValue("calories", meal.getCalories());
         if (meal.isNew()) {
             Number newId = insertMeal.executeAndReturnKey(map);
             meal.setId(newId.intValue());
-        } else if (namedParameterJdbcTemplate.update("UPDATE meals SET " +
-                "description=:description, calories=:calories, " +
-                "dateTime=:dateTime WHERE id=:id AND user_id=:user_id", map)
-                == 0) {
+        } else if (namedParameterJdbcTemplate.update(
+                "UPDATE meals " +
+                        "SET description=:description, calories=:calories, " +
+                        "date_time=:date_time " +
+                        "WHERE id=:id AND user_id=:user_id"
+                , map) == 0) {
             return null;
         }
         return meal;
@@ -66,11 +68,6 @@ public class JdbcMealRepository implements MealRepository {
     public boolean delete(int id, int userId) {
          int count = jdbcTemplate.update("DELETE FROM meals WHERE id=? AND user_id=?", id, userId);
          return count > 0;
-    }
-
-    @Override
-    public void deleteAll(int userId) {
-        jdbcTemplate.update("DELETE FROM meals WHERE user_id=?", userId);
     }
 
     @Override
@@ -84,14 +81,14 @@ public class JdbcMealRepository implements MealRepository {
     @Override
     public List<Meal> getAll(int userId) {
         return jdbcTemplate.query(
-                "SELECT * FROM meals WHERE id=? ORDER BY dateTime DESC", ROW_MAPPER, userId);
+                "SELECT * FROM meals WHERE id=? ORDER BY date_time DESC", ROW_MAPPER, userId);
     }
 
     @Override
     public List<Meal> getBetween(LocalDateTime startDate, LocalDateTime endDate, int userId) {
         return jdbcTemplate.query(
-                "SELECT * FROM meals WHERE dateTime>=? AND dateTime <=? " +
-                        "AND user_id=? ORDER BY dateTime DESC", ROW_MAPPER,
+                "SELECT * FROM meals WHERE date_time>=? AND date_time<=? " +
+                        "AND user_id=? ORDER BY date_time DESC", ROW_MAPPER,
                 Timestamp.valueOf(startDate), Timestamp.valueOf(endDate), userId);
     }
 }
