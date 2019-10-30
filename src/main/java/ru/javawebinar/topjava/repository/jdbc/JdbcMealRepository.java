@@ -1,17 +1,17 @@
 package ru.javawebinar.topjava.repository.jdbc;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.support.DataAccessUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.CollectionUtils;
 import ru.javawebinar.topjava.model.Meal;
 import ru.javawebinar.topjava.repository.MealRepository;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,13 +19,12 @@ import java.util.List;
 @Repository
 public class JdbcMealRepository implements MealRepository {
 
-    private static final RowMapper<Meal> ROW_MAPPER = new RowMapper<Meal>() {
-        @Override
-        public Meal mapRow(ResultSet rs, int rowNumber) throws SQLException {
-            return new Meal(rs.getInt("id"), rs.getTimestamp("dateTime").toLocalDateTime(),
-                    rs.getString("description"), rs.getInt("calories"));
-        }
-    };
+    private static final RowMapper<Meal> ROW_MAPPER =
+            (rs, rowNumber) -> new Meal(
+                    rs.getInt("id"),
+                    rs.getTimestamp("dateTime").toLocalDateTime(),
+                    rs.getString("description"),
+                    rs.getInt("calories"));
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -65,21 +64,34 @@ public class JdbcMealRepository implements MealRepository {
 
     @Override
     public boolean delete(int id, int userId) {
-        return false;
+         int count = jdbcTemplate.update("DELETE FROM meals WHERE id=? AND user_id=?", id, userId);
+         return count > 0;
+    }
+
+    @Override
+    public void deleteAll(int userId) {
+        jdbcTemplate.update("DELETE FROM meals WHERE user_id=?", userId);
     }
 
     @Override
     public Meal get(int id, int userId) {
-        return null;
+        List<Meal> meals = jdbcTemplate.query(
+                "SELECT * FROM meals WHERE id=? AND user_id=?", ROW_MAPPER,
+                id, userId);
+        return CollectionUtils.isEmpty(meals) ? null : DataAccessUtils.requiredSingleResult(meals);
     }
 
     @Override
     public List<Meal> getAll(int userId) {
-        return null;
+        return jdbcTemplate.query(
+                "SELECT * FROM meals WHERE id=? ORDER BY dateTime DESC", ROW_MAPPER, userId);
     }
 
     @Override
     public List<Meal> getBetween(LocalDateTime startDate, LocalDateTime endDate, int userId) {
-        return null;
+        return jdbcTemplate.query(
+                "SELECT * FROM meals WHERE dateTime>=? AND dateTime <=? " +
+                        "AND user_id=? ORDER BY dateTime DESC", ROW_MAPPER,
+                Timestamp.valueOf(startDate), Timestamp.valueOf(endDate), userId);
     }
 }
