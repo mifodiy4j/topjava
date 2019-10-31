@@ -1,0 +1,154 @@
+Index: src/test/java/ru/javawebinar/topjava/service/UserServiceTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/test/java/ru/javawebinar/topjava/service/UserServiceTest.java	(revision 320afa4a0abcfe73e3fb5a5a8afba2ebd8b571a9)
++++ src/test/java/ru/javawebinar/topjava/service/UserServiceTest.java	(date 1572442878109)
+@@ -33,8 +33,10 @@
+     public void create() throws Exception {
+         User newUser = new User(null, "New", "new@gmail.com", "newPass", 1555, false, new Date(), Collections.singleton(Role.ROLE_USER));
+         User created = service.create(newUser);
+-        newUser.setId(created.getId());
+-        assertMatch(service.getAll(), ADMIN, newUser, USER);
++        Integer newId = created.getId();
++        newUser.setId(newId);
++        assertMatch(created, newUser);
++        assertMatch(service.get(newId), newUser);
+     }
+ 
+     @Test(expected = DataAccessException.class)
+@@ -42,10 +44,10 @@
+         service.create(new User(null, "Duplicate", "user@yandex.ru", "newPass", Role.ROLE_USER));
+     }
+ 
+-    @Test
++    @Test(expected = NotFoundException.class)
+     public void delete() throws Exception {
+         service.delete(USER_ID);
+-        assertMatch(service.getAll(), ADMIN);
++        service.get(USER_ID);
+     }
+ 
+     @Test(expected = NotFoundException.class)
+Index: src/test/java/ru/javawebinar/topjava/service/MealServiceTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/test/java/ru/javawebinar/topjava/service/MealServiceTest.java	(revision 320afa4a0abcfe73e3fb5a5a8afba2ebd8b571a9)
++++ src/test/java/ru/javawebinar/topjava/service/MealServiceTest.java	(date 1572442758644)
+@@ -28,10 +28,10 @@
+     @Autowired
+     private MealService service;
+ 
+-    @Test
++    @Test(expected = NotFoundException.class)
+     public void delete() throws Exception {
+         service.delete(MEAL1_ID, USER_ID);
+-        assertMatch(service.getAll(USER_ID), MEAL6, MEAL5, MEAL4, MEAL3, MEAL2);
++        service.get(MEAL1_ID, USER_ID);
+     }
+ 
+     @Test(expected = NotFoundException.class)
+@@ -48,9 +48,10 @@
+     public void create() throws Exception {
+         Meal newMeal = getCreated();
+         Meal created = service.create(newMeal, USER_ID);
+-        newMeal.setId(created.getId());
+-        assertMatch(newMeal, created);
+-        assertMatch(service.getAll(USER_ID), newMeal, MEAL6, MEAL5, MEAL4, MEAL3, MEAL2, MEAL1);
++        Integer newId = created.getId();
++        newMeal.setId(newId);
++        assertMatch(created, newMeal);
++        assertMatch(service.get(newId, USER_ID), newMeal);
+     }
+ 
+     @Test
+@@ -92,4 +93,9 @@
+                 LocalDate.of(2015, Month.MAY, 30),
+                 LocalDate.of(2015, Month.MAY, 30), USER_ID), MEAL3, MEAL2, MEAL1);
+     }
++
++    @Test
++    public void getBetweenWithNullDates() throws Exception {
++        assertMatch(service.getBetweenDates(null, null, USER_ID), MEALS);
++    }
+ }
+\ No newline at end of file
+Index: src/test/java/ru/javawebinar/topjava/repository/inmemory/InMemoryMealRepository.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/test/java/ru/javawebinar/topjava/repository/inmemory/InMemoryMealRepository.java	(revision 320afa4a0abcfe73e3fb5a5a8afba2ebd8b571a9)
++++ src/test/java/ru/javawebinar/topjava/repository/inmemory/InMemoryMealRepository.java	(date 1572446520961)
+@@ -3,6 +3,8 @@
+ import org.slf4j.Logger;
+ import org.slf4j.LoggerFactory;
+ import org.springframework.stereotype.Repository;
++import ru.javawebinar.topjava.MealTestData;
++import ru.javawebinar.topjava.UserTestData;
+ import ru.javawebinar.topjava.model.Meal;
+ import ru.javawebinar.topjava.repository.MealRepository;
+ import ru.javawebinar.topjava.util.Util;
+@@ -22,6 +24,12 @@
+     // Map  userId -> mealRepository
+     private Map<Integer, InMemoryBaseRepository<Meal>> usersMealsMap = new ConcurrentHashMap<>();
+ 
++    {
++        InMemoryBaseRepository<Meal> userMeals = new InMemoryBaseRepository<>();
++        usersMealsMap.put(UserTestData.USER_ID, userMeals);
++        MealTestData.MEALS.forEach(meal -> userMeals.map.put(meal.getId(), meal));
++    }
++
+     @Override
+     public Meal save(Meal meal, int userId) {
+         Objects.requireNonNull(meal, "meal must not be null");
+Index: src/test/java/ru/javawebinar/topjava/MealTestData.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/test/java/ru/javawebinar/topjava/MealTestData.java	(revision 320afa4a0abcfe73e3fb5a5a8afba2ebd8b571a9)
++++ src/test/java/ru/javawebinar/topjava/MealTestData.java	(date 1572442558250)
+@@ -12,18 +12,19 @@
+ 
+ public class MealTestData {
+     public static final int MEAL1_ID = START_SEQ + 2;
+-    public static final int ADMIN_MEAL_ID = START_SEQ + 8;
++    public static final int ADMIN_MEAL_ID = START_SEQ + 9;
+ 
+     public static final Meal MEAL1 = new Meal(MEAL1_ID, of(2015, Month.MAY, 30, 10, 0), "Завтрак", 500);
+     public static final Meal MEAL2 = new Meal(MEAL1_ID + 1, of(2015, Month.MAY, 30, 13, 0), "Обед", 1000);
+     public static final Meal MEAL3 = new Meal(MEAL1_ID + 2, of(2015, Month.MAY, 30, 20, 0), "Ужин", 500);
+-    public static final Meal MEAL4 = new Meal(MEAL1_ID + 3, of(2015, Month.MAY, 31, 10, 0), "Завтрак", 500);
+-    public static final Meal MEAL5 = new Meal(MEAL1_ID + 4, of(2015, Month.MAY, 31, 13, 0), "Обед", 1000);
+-    public static final Meal MEAL6 = new Meal(MEAL1_ID + 5, of(2015, Month.MAY, 31, 20, 0), "Ужин", 510);
++    public static final Meal MEAL4 = new Meal(MEAL1_ID + 3, of(2015, Month.MAY, 31, 0, 0), "Еда на граничное значение", 100);
++    public static final Meal MEAL5 = new Meal(MEAL1_ID + 4, of(2015, Month.MAY, 31, 10, 0), "Завтрак", 500);
++    public static final Meal MEAL6 = new Meal(MEAL1_ID + 5, of(2015, Month.MAY, 31, 13, 0), "Обед", 1000);
++    public static final Meal MEAL7 = new Meal(MEAL1_ID + 6, of(2015, Month.MAY, 31, 20, 0), "Ужин", 510);
+     public static final Meal ADMIN_MEAL1 = new Meal(ADMIN_MEAL_ID, of(2015, Month.JUNE, 1, 14, 0), "Админ ланч", 510);
+     public static final Meal ADMIN_MEAL2 = new Meal(ADMIN_MEAL_ID + 1, of(2015, Month.JUNE, 1, 21, 0), "Админ ужин", 1500);
+ 
+-    public static final List<Meal> MEALS = Arrays.asList(MEAL6, MEAL5, MEAL4, MEAL3, MEAL2, MEAL1);
++    public static final List<Meal> MEALS = Arrays.asList(MEAL7, MEAL6, MEAL5, MEAL4, MEAL3, MEAL2, MEAL1);
+ 
+     public static Meal getCreated() {
+         return new Meal(null, of(2015, Month.JUNE, 1, 18, 0), "Созданный ужин", 300);
+Index: src/main/resources/db/populateDB.sql
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/resources/db/populateDB.sql	(revision 320afa4a0abcfe73e3fb5a5a8afba2ebd8b571a9)
++++ src/main/resources/db/populateDB.sql	(date 1572442558230)
+@@ -15,6 +15,7 @@
+ VALUES ('2015-05-30 10:00:00', 'Завтрак', 500, 100000),
+        ('2015-05-30 13:00:00', 'Обед', 1000, 100000),
+        ('2015-05-30 20:00:00', 'Ужин', 500, 100000),
++       ('2015-05-31 0:00:00', 'Еда на граничное значение', 100, 100000),
+        ('2015-05-31 10:00:00', 'Завтрак', 500, 100000),
+        ('2015-05-31 13:00:00', 'Обед', 1000, 100000),
+        ('2015-05-31 20:00:00', 'Ужин', 510, 100000),
