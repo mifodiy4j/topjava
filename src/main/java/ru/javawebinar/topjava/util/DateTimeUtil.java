@@ -31,8 +31,8 @@ public class DateTimeUtil {
         return StringUtils.isEmpty(str) ? null : LocalTime.parse(str);
     }
 
-    public static LocalDate createDateTime(@Nullable LocalDate date, LocalDate defaultDate, LocalTime time) {
-        return LocalDate.of(date != null ? date : defaultDate, time);
+    public static LocalDateTime createDateTime(@Nullable LocalDate date, LocalDate defaultDate, LocalTime time) {
+        return LocalDateTime.of(date != null ? date : defaultDate, time);
     }
 
     public static LocalDateTime getStartInclusive(LocalDate localDate) {
